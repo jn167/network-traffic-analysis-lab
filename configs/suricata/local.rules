@@ -1,0 +1,32 @@
+# Custom Suricata rules for the Network Traffic Analysis Lab.
+# Install on nids-sensor at: /etc/suricata/rules/local.rules
+# and add that path under "rule-files:" in /etc/suricata/suricata.yaml.
+#
+# SIDs 1000000-1999999 are reserved for local rules, so these never collide
+# with the ET Open ruleset pulled in by suricata-update.
+#
+# Every message starts with "NTALAB" so the Wazuh rules in
+# configs/wazuh/local_rules.xml can pick these out of the eve.json feed.
+
+# 1. T1046 Network Service Discovery: a burst of bare SYNs from one source.
+#    "type both" alerts once per window instead of once per packet.
+alert tcp any any -> $HOME_NET any (msg:"NTALAB SCAN Possible TCP SYN port scan"; flow:stateless; flags:S,CE; threshold:type both, track by_src, count 50, seconds 10; classtype:attempted-recon; metadata:mitre_technique_id T1046; sid:1000001; rev:1;)
+
+# 2. T1110.001 Password Guessing: many new SSH connections from one source.
+#    Hydra opens a fresh TCP session every few guesses, so connection rate is the tell.
+alert tcp any any -> $HOME_NET 22 (msg:"NTALAB BRUTEFORCE Possible SSH brute force (connection burst)"; flow:stateless; flags:S,CE; threshold:type both, track by_src, count 10, seconds 60; classtype:attempted-admin; metadata:mitre_technique_id T1110.001; sid:1000002; rev:1;)
+
+# 3. Cleartext credentials over FTP (T1040: what an attacker sniffing the wire collects).
+alert ftp any any -> $HOME_NET 21 (msg:"NTALAB CREDS FTP password sent in cleartext"; flow:to_server,established; content:"PASS "; depth:5; nocase; classtype:policy-violation; metadata:mitre_technique_id T1040; sid:1000003; rev:1;)
+
+# 4. Cleartext credentials over HTTP Basic auth (base64 is encoding, not encryption).
+alert http any any -> $HOME_NET any (msg:"NTALAB CREDS HTTP Basic auth credentials in cleartext"; flow:to_server,established; http.header; content:"Authorization|3a 20|Basic "; nocase; classtype:policy-violation; metadata:mitre_technique_id T1040; sid:1000004; rev:1;)
+
+# 5. T1071.004 / T1048 DNS tunneling: a query with a very long, encoded-looking label.
+#    Normal hostnames rarely have a single label of 40+ alphanumeric characters.
+alert dns any any -> any any (msg:"NTALAB EXFIL DNS query with long encoded label (possible tunneling)"; dns.query; pcre:"/(^|\.)[a-z0-9]{40,}\./i"; threshold:type both, track by_src, count 5, seconds 60; classtype:bad-unknown; metadata:mitre_technique_id T1071.004; sid:1000005; rev:1;)
+
+# 6. T1071.001 C2 over HTTP: check-in to a raw IP address on a non-standard port.
+#    The beacon spoofs a normal browser User-Agent, so this keys on the request shape
+#    instead: an HTTP request whose Host header is a bare IP and whose URI is a check-in path.
+alert http $HOME_NET any -> any !80 (msg:"NTALAB C2 HTTP check-in to raw IP on non-standard port"; flow:to_server,established; http.method; content:"GET"; http.uri; content:"/updates/check?id="; startswith; http.host; pcre:"/^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/"; classtype:trojan-activity; metadata:mitre_technique_id T1071.001; sid:1000006; rev:1;)

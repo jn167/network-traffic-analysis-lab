@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pcap
+!pcaps/README.md
+captures/
+*.log

@@ -1,0 +1,12 @@
+<!--
+  Add this block inside <ossec_config> in /var/ossec/etc/ossec.conf on nids-sensor
+  (the Wazuh AGENT on the sensor, not the manager), then:
+      sudo systemctl restart wazuh-agent
+
+  The agent tails Suricata's EVE log line by line. Each line is a JSON object,
+  which Wazuh's built-in json decoder and Suricata rules (86600-86604) understand.
+-->
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/suricata/eve.json</location>
+</localfile>

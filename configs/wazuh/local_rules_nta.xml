@@ -1,0 +1,81 @@
+<!--
+  Network Traffic Analysis Lab: Wazuh rules for Suricata alerts from nids-sensor.
+
+  Install on wazuh-server: append everything below to
+      /var/ossec/etc/rules/local_rules.xml
+  (keep the Lab 1 rules 100100-100200 that are already there), then:
+      sudo /var/ossec/bin/wazuh-logtest     (optional: paste a sample eve.json alert line)
+      sudo systemctl restart wazuh-manager
+
+  How it fits together:
+    Suricata writes eve.json -> Wazuh agent on nids-sensor ships it (log_format json)
+    -> built-in rule 86600 tags it as Suricata, 86601 matches event_type "alert" (level 3)
+    -> these rules re-score the lab's own NTALAB signatures and add MITRE mapping.
+
+  Rule IDs 100300-100399 are reserved for this lab.
+-->
+<group name="nta_lab,ids,suricata,">
+
+  <!-- Parent: any of this lab's custom Suricata signatures -->
+  <rule id="100300" level="5">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature" type="pcre2">^NTALAB </field>
+    <description>NTA Lab: Suricata custom alert - $(alert.signature)</description>
+  </rule>
+
+  <rule id="100301" level="8">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000001$</field>
+    <description>NTA Lab: TCP SYN port scan from $(src_ip) against $(dest_ip)</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+
+  <rule id="100302" level="10">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000002$</field>
+    <description>NTA Lab: SSH brute force connection burst from $(src_ip) to $(dest_ip)</description>
+    <mitre>
+      <id>T1110.001</id>
+    </mitre>
+  </rule>
+
+  <rule id="100303" level="7">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000003$</field>
+    <description>NTA Lab: FTP password sent in cleartext from $(src_ip) to $(dest_ip)</description>
+    <mitre>
+      <id>T1040</id>
+    </mitre>
+  </rule>
+
+  <rule id="100304" level="7">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000004$</field>
+    <description>NTA Lab: HTTP Basic auth credentials in cleartext from $(src_ip) to $(dest_ip)</description>
+    <mitre>
+      <id>T1040</id>
+    </mitre>
+  </rule>
+
+  <rule id="100305" level="12">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000005$</field>
+    <description>NTA Lab: possible DNS tunneling from $(src_ip) (long encoded query labels)</description>
+    <mitre>
+      <id>T1071.004</id>
+      <id>T1048</id>
+    </mitre>
+  </rule>
+
+  <rule id="100306" level="12">
+    <if_sid>100300</if_sid>
+    <field name="alert.signature_id">^1000006$</field>
+    <description>NTA Lab: possible C2 check-in from $(src_ip) to $(dest_ip):$(dest_port)</description>
+    <mitre>
+      <id>T1071.001</id>
+    </mitre>
+  </rule>
+
+</group>
