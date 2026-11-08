@@ -99,7 +99,34 @@ moving on.
 
 ## Phase 5: Wazuh integration
 
-- (pending)
+- Installed the Wazuh agent (4.14.10) on `nids-sensor`, pointed at the manager
+  10.0.50.10 with agent name `nids-sensor`, and held the package version so it
+  can not drift ahead of the manager. The agent registered and showed Active in
+  the dashboard next to the Lab 1 agents.
+- Pointed the agent at Suricata's output by adding a `<localfile>` block
+  (`json`, `/var/log/suricata/eve.json`) inside the last `<ossec_config>` block
+  of the agent's `ossec.conf`.
+- On the manager, appended the lab rules (100300-100306) to `local_rules.xml`
+  and restarted `wazuh-manager`. Validated with `wazuh-logtest`: a sample
+  Suricata scan alert matched rule 100301 (level 8) with MITRE T1046, tactic
+  Discovery, technique Network Service Discovery.
+- End to end: an nmap scan from Kali showed up in the dashboard's Threat Hunting
+  view as a `nids-sensor` alert mapped to T1046. Network detections now land in
+  the same SIEM as the Lab 1 host detections.
+
+### Issue: rules appended twice
+
+A re-run of the append left two copies of the `nta_lab` rule group in
+`local_rules.xml`, and `wazuh-logtest` warned that rules 100300-100306 were
+duplicated (Wazuh uses only the first copy, so the match still worked, but it
+warns on every start). Fixed by restoring the pre-append backup and appending
+exactly once, confirmed back to a single copy and a clean logtest.
+
+### Note: finding alerts in the dashboard
+
+The scan alert did not appear at first because of where and when to look: the
+individual alerts are under Threat Hunting's **Events** tab, and the time range
+has to cover the present. Widening the range surfaced it.
 
 ---
 
