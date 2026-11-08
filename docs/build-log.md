@@ -132,7 +132,17 @@ has to cover the present. Widening the range surfaced it.
 
 ## Phase 6: Target services
 
-- (pending)
+- Ran `setup-target-services.sh` on `linux-endpoint`. Its guard confirmed the
+  host is 10.0.50.30 before installing anything, then stood up vsftpd (FTP, 21),
+  Apache (HTTP, 80, with `/admin` behind Basic auth), and dnsmasq (DNS, 53,
+  answering only `*.ntalab.test` and forwarding nothing).
+- `systemd-resolve` stayed on its loopback addresses (127.0.0.53/54), so there
+  was no port-53 conflict with dnsmasq bound to 10.0.50.30. Installing the
+  dnsmasq config before the package is what kept it from grabbing every
+  interface.
+- Self-tests from Kali passed: the HTTP Basic admin page returned its HTML, and
+  `dig @10.0.50.30 test.ntalab.test` resolved to 10.0.50.30. Targets ready for
+  the scenarios.
 
 ---
 
