@@ -105,6 +105,6 @@ see it in two places: `fast.log` on the sensor, and the Wazuh dashboard
 
 ## Screenshot checklist
 
-- [ ] All three agents Active in Wazuh
-- [ ] `wazuh-logtest` matching a lab rule (100301-100306) with MITRE populated
-- [ ] A Suricata network alert in the Wazuh dashboard, mapped to MITRE
+- [x] All three agents Active in Wazuh (screenshot 8; win-endpoint off)
+- [x] `wazuh-logtest` matching a lab rule (100301-100306) with MITRE populated (screenshot 9)
+- [x] A Suricata network alert in the Wazuh dashboard, mapped to MITRE (screenshot 10)

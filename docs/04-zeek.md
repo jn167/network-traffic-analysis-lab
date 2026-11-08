@@ -98,6 +98,6 @@ point for now is that Zeek's logs are what make it possible.
 
 ## Screenshot checklist
 
-- [ ] `zeekctl status` showing the node running
+- [x] `zeekctl status` showing the node running (screenshot 7)
 - [ ] `conn.log` through `zeek-cut` with real connections
 - [ ] `dns.log` or `http.log` populated after some traffic

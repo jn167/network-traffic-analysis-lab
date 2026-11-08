@@ -69,5 +69,5 @@ those too).
 
 ## Screenshot checklist
 
-- [ ] `ss -ltnup` on linux-endpoint showing ports 21, 22, 53, 80 listening
-- [ ] The three self-test commands succeeding from Kali
+- [x] `ss -ltnup` on linux-endpoint showing ports 21, 22, 53, 80 listening (screenshot 11)
+- [x] The three self-test commands succeeding from Kali (curl + dig verified from Kali)

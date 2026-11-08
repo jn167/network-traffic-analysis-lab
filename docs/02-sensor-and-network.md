@@ -111,6 +111,6 @@ VirtualBox **Promiscuous Mode: Allow All** setting from step 4.
 
 ## Screenshot checklist
 
-- [ ] VirtualBox showing the sensor's Adapter 1 set to Promiscuous Mode: Allow All
-- [ ] `ip -br link` on the sensor showing `PROMISC`
-- [ ] `verify-visibility.sh` PASS output
+- [x] VirtualBox showing the sensor's Adapter 1 set to Promiscuous Mode: Allow All (screenshot 1)
+- [x] `ip -br link` on the sensor showing `PROMISC` (shown in screenshot 3)
+- [x] `verify-visibility.sh` PASS output (screenshot 4)

@@ -102,6 +102,6 @@ Within a few seconds `fast.log` on the sensor should show the SCAN alert
 
 ## Screenshot checklist
 
-- [ ] `suricata -T` clean load
-- [ ] `fast.log` showing the SCAN alert from the smoke test
-- [ ] `suricata-update` summary (rules loaded)
+- [x] `suricata -T` clean load (screenshot 5)
+- [x] `fast.log` showing the SCAN alert from the smoke test (screenshot 6)
+- [x] `suricata-update` summary (rules loaded) (rule count shown in screenshot 5)
