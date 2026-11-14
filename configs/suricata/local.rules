@@ -12,9 +12,14 @@
 #    "type both" alerts once per window instead of once per packet.
 alert tcp any any -> $HOME_NET any (msg:"NTALAB SCAN Possible TCP SYN port scan"; flow:stateless; flags:S,CE; threshold:type both, track by_src, count 50, seconds 10; classtype:attempted-recon; metadata:mitre_technique_id T1046; sid:1000001; rev:1;)
 
-# 2. T1110.001 Password Guessing: many new SSH connections from one source.
-#    Hydra opens a fresh TCP session every few guesses, so connection rate is the tell.
-alert tcp any any -> $HOME_NET 22 (msg:"NTALAB BRUTEFORCE Possible SSH brute force (connection burst)"; flow:stateless; flags:S,CE; threshold:type both, track by_src, count 10, seconds 60; classtype:attempted-admin; metadata:mitre_technique_id T1110.001; sid:1000002; rev:1;)
+# 2. T1110.001 Password Guessing: multiple new SSH connections from one source.
+#    Tuning note: SSH allows several password attempts per connection (MaxAuthTries),
+#    so Hydra packed ~20 guesses into only ~5 connections and an initial threshold of
+#    10 never fired. Lowered to 4 after testing against a real Hydra run. This trades a
+#    little false-positive risk (a busy admin opening several sessions) for actually
+#    catching the attack. The more reliable detection for this is log-based, counting
+#    failed passwords in auth.log (Wazuh rule 5763); see docs/findings.md.
+alert tcp any any -> $HOME_NET 22 (msg:"NTALAB BRUTEFORCE Possible SSH brute force (connection burst)"; flow:stateless; flags:S,CE; threshold:type both, track by_src, count 4, seconds 60; classtype:attempted-admin; metadata:mitre_technique_id T1110.001; sid:1000002; rev:2;)
 
 # 3. Cleartext credentials over FTP (T1040: what an attacker sniffing the wire collects).
 alert ftp any any -> $HOME_NET 21 (msg:"NTALAB CREDS FTP password sent in cleartext"; flow:to_server,established; content:"PASS "; depth:5; nocase; classtype:policy-violation; metadata:mitre_technique_id T1040; sid:1000003; rev:1;)
