@@ -148,14 +148,44 @@ has to cover the present. Widening the range surfaced it.
 
 ## Phase 7: Scenarios
 
-| # | Scenario | Suricata SID | Fired? | pcap saved | Screenshot |
+All six scenarios run from Kali against `linux-endpoint`, each captured to its
+own pcap on the sensor. Every custom rule fired (one needed tuning first).
+
+| # | Scenario | Suricata SID | Fired? | pcap | Screenshot |
 |---|---|---|---|---|---|
-| 1 | Port scan | 1000001 | | | |
-| 2 | SSH brute force | 1000002 | | | |
-| 3 | FTP cleartext | 1000003 | | | |
-| 4 | HTTP Basic | 1000004 | | | |
-| 5 | DNS tunneling | 1000005 | | | |
-| 6 | C2 beacon | 1000006 (+Zeek) | | | |
+| 1 | Port scan | 1000001 | yes | 01-recon-scan.pcap | 12 |
+| 2 | SSH brute force | 1000002 | yes (after tuning) | 02-ssh-bruteforce.pcap | 13 |
+| 3 | FTP cleartext | 1000003 | yes | 03-cleartext-creds.pcap | 14 |
+| 4 | HTTP Basic | 1000004 | yes | 03-cleartext-creds.pcap | 14 |
+| 5 | DNS tunneling | 1000005 | yes | 05-dns-exfil.pcap | 15, 16 |
+| 6 | C2 beacon | 1000006 (+ Zeek) | yes | 06-c2-beacon.pcap | 17, 18 |
+
+### Finding: the SSH brute-force rule needed tuning
+
+The brute-force rule (1000002) did not fire on the first run. Counting SYNs in
+the capture showed only 5 new connections to port 22 for all 20 Hydra guesses,
+because SSH allows several password attempts per connection (MaxAuthTries). The
+original threshold of 10 connections in 60s was never reached. Lowered it to 4,
+reloaded Suricata, re-ran, and it fired (rule bumped to rev 2). The real lesson:
+a pure connection-rate rule under-detects brute force against a connection-reusing
+protocol, and the more reliable detection is log-based (Wazuh counts failed
+passwords in auth.log regardless of connection reuse).
+
+### DNS tunneling rebuilt from logs
+
+After the tunneling alert fired, rebuilt the exfiltrated file from nothing but
+the dnsmasq query log using `dns_reassemble.py`. The recovered CSV matched the
+original on Kali byte-for-byte (SHA-256 identical). Concrete proof of why long
+encoded DNS labels are worth alerting on.
+
+### Beacon caught by timing, not signature
+
+The beacon faked an ordinary Chrome user-agent, so a naive signature on the UA
+would miss it. `beacon_detect.py` flagged it anyway from the Zeek connection
+log: `10.0.50.30 -> 10.0.50.40:8080`, 15 check-ins, mean 20.5s, CV 0.11, well
+inside the beaconing threshold. Suricata's 1000006 also caught the request shape
+(check-in path to a raw IP on a non-standard port). The timing-based catch is
+the durable one.
 
 ---
 
