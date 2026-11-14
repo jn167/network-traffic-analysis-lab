@@ -4,7 +4,7 @@
 
 **A dedicated IDS sensor that watches an isolated network, catches six attacker techniques on the wire with Suricata and Zeek, feeds its alerts into the Lab 1 Wazuh SIEM, and traces each one back through the packets the way a SOC analyst works.**
 
-![Status](https://img.shields.io/badge/status-in%20progress-yellow)
+![Status](https://img.shields.io/badge/status-complete-brightgreen)
 ![Suricata](https://img.shields.io/badge/Suricata-7.x-EF3B2D)
 ![Zeek](https://img.shields.io/badge/Zeek-8.0%20LTS-4B9CD3)
 ![MITRE](https://img.shields.io/badge/MITRE%20ATT%26CK-mapped-red)
@@ -26,7 +26,7 @@ This is Lab 2 in my cybersecurity home lab series. [Lab 1](https://github.com/jn
 This README is the walkthrough. The [`docs/`](docs/) folder holds the phase-by-phase build guide, [`docs/build-log.md`](docs/build-log.md) is the honest running log, and [`docs/findings.md`](docs/findings.md) holds the analyst write-ups.
 
 > [!NOTE]
-> This lab is in progress. The environment, rules, scripts, and documentation are built and the detection logic is validated against generated test traffic. I am currently running the scenarios on the live VMs and adding the screenshots and investigation write-ups as I complete each phase.
+> Every phase is complete: the sensor is built with full network visibility, Suricata and Zeek are running, all six scenarios were run on the live VMs with each custom rule firing (one after a tuning fix I document below), the captures are analysed, and Suricata's alerts flow into the Lab 1 Wazuh SIEM. A deeper hands-on Wireshark walk-through of the captures and a public-pcap investigation are noted as follow-on analysis in [`docs/findings.md`](docs/findings.md).
 
 ---
 
@@ -83,7 +83,8 @@ A sensor that just joins the network only sees its own traffic. Getting it to se
 [`scripts/sensor/verify-visibility.sh`](scripts/sensor/verify-visibility.sh) proves it by sniffing a ping between two *other* hosts. That test passing is the gate for the whole lab.
 
 <div align="center">
-  <em>[Screenshot: verify-visibility.sh reporting PASS]</em>
+  <a href="screenshots/ping%20pass.png"><img src="screenshots/ping%20pass.png" width="760" alt="verify-visibility.sh reporting PASS"></a><br>
+  <em>The sensor overhearing a ping between two <em>other</em> hosts (Kali and the endpoint). Promiscuous mode gives it visibility into traffic it is not part of, which is the gate for the whole lab.</em>
 </div>
 
 ---
@@ -107,7 +108,8 @@ Six custom Suricata rules in [`configs/suricata/local.rules`](configs/suricata/l
 Each rule's logic was validated against generated test captures before going live: all six fire on their own scenario and none fire on matched benign traffic (a normal browse, a handful of SYNs, ordinary DNS).
 
 <div align="center">
-  <em>[Screenshot: all six alerts in fast.log / the Wazuh dashboard]</em>
+  <a href="screenshots/custom%20rule%20fire.png"><img src="screenshots/custom%20rule%20fire.png" width="820" alt="Custom rule firing on a live scan"></a><br>
+  <em>A custom rule (1000001) firing on a live nmap scan, alongside the ET Open community rules catching the same activity on specific service ports. Signatures working on two levels at once.</em>
 </div>
 
 ---
@@ -135,10 +137,17 @@ The captures are where the learning lands. In Wireshark ([`docs/08-analysis-and-
 - The DNS tunnel shows as queries with absurd encoded labels; [`scripts/analysis/dns_reassemble.py`](scripts/analysis/dns_reassemble.py) rebuilds the leaked file from the query log, and it matches the original's SHA-256.
 - The beacon shows as the same GET repeating on a near-regular interval; [`scripts/analysis/beacon_detect.py`](scripts/analysis/beacon_detect.py) flags it from the Zeek logs by the low variation in its timing, while leaving human-like traffic alone.
 
-Then one capture I **did not** make: a real malware pcap from [malware-traffic-analysis.net](https://www.malware-traffic-analysis.net/training-exercises.html), worked from an IDS alert the way an analyst picks up an unknown capture, identifying the infected host, the C2, and the response. Write-ups are in [`docs/findings.md`](docs/findings.md).
+The analyst write-ups for these, the cleartext-credential capture, the SSH brute force and its tuning, and the beacon, are in [`docs/findings.md`](docs/findings.md). A planned next exercise is a real malware pcap from [malware-traffic-analysis.net](https://www.malware-traffic-analysis.net/training-exercises.html), worked from an IDS alert the way an analyst picks up an unknown capture, identifying the infected host, the C2, and the response.
 
 <div align="center">
-  <em>[Screenshot: Follow-TCP-Stream showing the cleartext FTP password]</em>
+  <a href="screenshots/ftp%20http%20fast.png"><img src="screenshots/ftp%20http%20fast.png" width="820" alt="Cleartext credential alerts"></a><br>
+  <em>The cleartext-credential rules firing: the FTP password (1000003) and the HTTP Basic auth header (1000004) both crossing the wire readable. In the capture the FTP <code>PASS</code> is plain text and the HTTP <code>Authorization: Basic</code> base64-decodes straight to the login.</em>
+  <br><br>
+  <a href="screenshots/hash%20match.png"><img src="screenshots/hash%20match.png" width="820" alt="DNS tunneling rebuilt from logs, SHA-256 match"></a><br>
+  <em>The DNS-tunneling payload rebuilt from the server's query log alone, matching the original's SHA-256 byte-for-byte.</em>
+  <br><br>
+  <a href="screenshots/beacon%20detect.png"><img src="screenshots/beacon%20detect.png" width="820" alt="Beacon detected by timing"></a><br>
+  <em>The C2 beacon flagged by connection timing (CV 0.11), even though every individual request looked like ordinary Chrome traffic.</em>
 </div>
 
 ---
@@ -148,7 +157,8 @@ Then one capture I **did not** make: a real malware pcap from [malware-traffic-a
 The sensor runs a Wazuh agent that tails Suricata's `eve.json` and ships it to the Lab 1 manager. Custom rules 100300-100306 ([`configs/wazuh/local_rules_nta.xml`](configs/wazuh/local_rules_nta.xml)) re-score the lab's own signatures and attach the MITRE mapping, so a port scan or a beacon detected on the wire shows up in the same dashboard as Lab 1's host detections, tagged with its technique.
 
 <div align="center">
-  <em>[Screenshot: a network alert from nids-sensor in the Wazuh dashboard, mapped to MITRE]</em>
+  <a href="screenshots/rule.mitre.png"><img src="screenshots/rule.mitre.png" width="820" alt="Network alert from nids-sensor in Wazuh, mapped to MITRE"></a><br>
+  <em>A Suricata network alert from <code>nids-sensor</code> in the Lab 1 Wazuh dashboard, scored by the lab rules and tagged with its MITRE technique.</em>
 </div>
 
 ---
@@ -199,7 +209,7 @@ screenshots/    Evidence for each phase
 | # | Lab | Focus | Status |
 |---|---|---|---|
 | 1 | [SIEM & Log Analysis](https://github.com/jn167/siem-log-analysis-lab) | Wazuh, log ingestion, custom detections, dashboards | Complete |
-| **2** | **Network Traffic Analysis** | **Suricata, Zeek, Wireshark, packet capture and analysis** | **In progress** |
+| **2** | **[Network Traffic Analysis](https://github.com/jn167/network-traffic-analysis-lab)** | **Suricata, Zeek, Wireshark, packet capture and analysis** | **Complete** |
 | 3 | Vulnerability Scanning | Scanning a test network, prioritizing findings | Planned |
 | 4 | Incident Response Practice | Simulated incident, timeline, and write-up | Planned |
 | 5 | Active Directory Home Lab | Building a small AD domain and studying common attacks | Planned |
